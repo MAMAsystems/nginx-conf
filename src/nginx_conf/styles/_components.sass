@@ -347,7 +347,6 @@ select.nc-input
   border-bottom: 1px solid var(--nc-line)
 .nc-disclosure
   padding: 12px 0
-  border-bottom: 1px solid var(--nc-line)
   > summary
     display: flex
     align-items: center
@@ -463,18 +462,19 @@ code
   width: 100%
   border-collapse: collapse
   font-size: inherit
+  tbody tr
+    background: #2b2b2b
+    &:nth-child(even)
+      background: #353535
+    &:hover, &:focus-within
+      background: #444
   th, td
     padding: 12px 16px
     text-align: left
     white-space: nowrap
-    border-bottom: 1px solid var(--nc-line)
   th
     font-weight: 700
     color: var(--nc-fg)
-  th:first-child, td:first-child
-    padding-left: 0
-  th:last-child, td:last-child
-    padding-right: 0
   .nc-table__num
     text-align: right
 

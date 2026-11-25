@@ -195,6 +195,11 @@ rechts. Escape schließt den Dialog. Die darunterliegende Seite bleibt
 währenddessen gesperrt; nach dem Schließen kehrt der Fokus zum Auslöser zurück. Die Bestätigung im
 Styleguide ändert ausschließlich die lokale Rückmeldung, keine Config-Datei.
 
+Tabellen haben eine transparente Kopfzeile und abwechselnd dunklere und
+hellere graue Datenzeilen. Hover und Tastaturfokus
+heben die jeweilige Zeile hervor. Aufklappbare Bereiche haben keine untere
+Trennlinie.
+
 Die Tabelle „Domains und Projekte“ zeigt aktive und inaktive Domains mit
 rechts ausgerichteten Aktionen. „Config öffnen“ zeigt die zugehörige Datei
 mit Projekt, Pfad und bearbeitbarem Inhalt in einem nativen Dialog.
