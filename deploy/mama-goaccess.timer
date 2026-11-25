@@ -1,0 +1,9 @@
+[Unit]
+Description=Refresh MAMA systems web statistics hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

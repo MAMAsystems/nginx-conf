@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+shopt -s nullglob
+logs=(/var/log/nginx/mamasystems-access.log /var/log/nginx/mamasystems-access.log.[0-9]*)
+report=$(mktemp /var/lib/mama-goaccess/report.XXXXXX.html)
+trap 'rm -f "$report"' EXIT
+zcat -f -- "${logs[@]}" | /usr/bin/goaccess - --log-format=COMBINED --anonymize-ip --no-query-string --ignore-crawlers --html-report-title='MAMA systems Webstatistik' --no-progress -o "$report"
+chmod 0640 "$report"
+mv -f "$report" /var/lib/mama-goaccess/index.html

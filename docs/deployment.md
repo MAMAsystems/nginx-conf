@@ -381,3 +381,44 @@ sudo certbot renew --dry-run --non-interactive
 Auf pepperz Einrichtung, Passwort-/TOTP-Anmeldung, Config-Schreibzugriff, Nginx-Test/Reload,
 Prozessstart und Wiederanlauf nach Neustart pruefen. Ein lokaler Containercheck
 ersetzt diese Abnahme auf dem Zielserver nicht.
+
+## GoAccess auf mama2
+
+Die Statistik ist ein optionaler Teil der Installation auf `mama2`. Die
+versionierte Nginx-Konfiguration erfasst Zugriffe auf den Homepage-VHost mit
+`server_name mamasystems.de www.mamasystems.de`. Dieser VHost übernimmt die
+Zugriffslogs aus dem Nginx-HTTP-Kontext. Die Datei unter `/var/log/nginx` wird
+durch die vorhandene Nginx-Logrotation erfasst. Der HTML-Bericht verarbeitet
+das aktuelle und die noch vorhandenen rotierten Homepage-Logs.
+
+Nach Einrichtung von Nginx, der Homepage und des NC-Dienstkontos aus dem
+ausgecheckten NC-Repository installieren:
+
+```bash
+sudo apt install --no-install-recommends goaccess
+sudo install -d -m 0755 /usr/local/libexec
+sudo install -d -o www-data -g nginx-config -m 2750 /var/lib/mama-goaccess
+if ! sudo test -e /var/log/nginx/mamasystems-access.log; then
+    sudo install -o www-data -g adm -m 0640 /dev/null /var/log/nginx/mamasystems-access.log
+fi
+sudo install -m 0644 deploy/mama-goaccess.conf /etc/nginx/conf.d/mama-goaccess.conf
+sudo install -m 0755 scripts/mama-goaccess-report /usr/local/libexec/mama-goaccess-report
+sudo install -m 0644 deploy/mama-goaccess.service deploy/mama-goaccess.timer /etc/systemd/system/
+sudo nginx -t && sudo systemctl reload nginx
+sudo systemctl daemon-reload
+sudo systemctl enable --now mama-goaccess.timer
+```
+
+Sobald mindestens ein Homepage-Aufruf im neuen Log steht, kann der erste
+Bericht sofort erzeugt und geprüft werden:
+
+```bash
+sudo systemctl start mama-goaccess.service
+sudo -u nginx-config test -r /var/lib/mama-goaccess/index.html
+systemctl list-timers mama-goaccess.timer
+```
+
+Der stündliche Timer führt den Berichtsgenerator als `www-data` aus. Das
+Setgid-Verzeichnis sorgt dafür, dass der Bericht die Gruppe `nginx-config`
+erbt und für den NC-Dienst lesbar ist. Die öffentliche Statistikroute benötigt
+eine NC-Sitzung. Der zusätzliche Nginx-Port `8091` ist nur an Loopback gebunden.
