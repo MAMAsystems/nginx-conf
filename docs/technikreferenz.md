@@ -270,8 +270,8 @@ kontrollierte Helper ersetzt den bestehenden Projekt-Symlink atomar und prüft
 mit `nginx -t`. Bei einem Fehler stellt er den bisherigen Verweis wieder her.
 Die App speichert die neue Auswahl erst nach erfolgreicher Prüfung, während
 die globale Aktionssperre noch gehalten wird. Schlägt das Speichern fehl,
-fordert sie die Wiederherstellung beim Helper an. Nginx wird separat neu
-geladen. Bestehende Namen `<projekt>` und `<projekt>.conf` werden unterstützt;
+fordert sie die Wiederherstellung beim Helper an. Nach erfolgreichem Test
+und Speichern lädt die App Nginx automatisch neu. Bestehende Namen `<projekt>` und `<projekt>.conf` werden unterstützt;
 mehrere oder fremde enabled-Verweise werden nicht stillschweigend verändert.
 Die Config-Auswahl verwendet `autocomplete="off"`, damit Firefox nach einem
 Neuladen den gespeicherten Stand statt einer zuvor abgelehnten Auswahl zeigt.

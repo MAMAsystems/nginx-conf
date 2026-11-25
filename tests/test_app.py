@@ -1785,6 +1785,7 @@ def test_config_selection_switches_and_saves_under_action_lock(monkeypatch, tmp_
         link.symlink_to(old)
     db = AppDatabase(main.DATABASE_PATH)
     original_run = subprocess.run
+    reloads = []
 
     def run(argv, **kwargs):
         if argv == ("/usr/sbin/nginx", "-t"):
@@ -1799,6 +1800,10 @@ def test_config_selection_switches_and_saves_under_action_lock(monkeypatch, tmp_
 
     class Runner:
         def run(self, argv, *, stdin, timeout_seconds):
+            if argv == nginx_reload_command().argv:
+                assert db.get_project_selection("demo-app").nginx_config_path == str(target)
+                reloads.append(argv)
+                return CommandResult(0, "", "")
             code, response = handle_helper_request(
                 argv[1],
                 stdin,
@@ -1822,6 +1827,7 @@ def test_config_selection_switches_and_saves_under_action_lock(monkeypatch, tmp_
     monkeypatch.setattr(AppDatabase, "save_project_selection", save)
     response = client.post("/api/projects/demo-app/config-selection", data={"nginx_config_path": str(target)})
     assert response.status_code == (500 if failure == "save" else 200)
+    assert len(reloads) == (0 if failure else 1)
     active_links = list(enabled.iterdir())
     if failure:
         assert db.get_project_selection("demo-app").nginx_config_path == str(old)
@@ -1880,6 +1886,17 @@ def test_project_detail_has_one_config_dropdown_and_selected_details(monkeypatch
     assert "unused.example.com" not in response.text
     assert '/configs/app.nginx/deactivate"' in response.text
     assert '<a href="/" aria-current="page">Projekte</a>' not in response.text
+
+
+def test_project_page_offers_power_action_for_inactive_config(monkeypatch, tmp_path):
+    configure_git_project_roots(monkeypatch, tmp_path)
+
+    response = client.get("/projects/demo-app")
+
+    assert response.status_code == 200
+    assert "Selected config" in response.text
+    assert 'aria-label="Config aktivieren"' in response.text
+    assert 'aria-label="Config deaktivieren"' not in response.text
 
 
 def test_legacy_selection_cannot_bypass_switch_for_active_config(monkeypatch, tmp_path):

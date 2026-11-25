@@ -3,9 +3,9 @@
   {% set choice = project_choices.get(project.project_name) if project_choices is defined else none %}
   {% if project.configs %}
     <div class="app-config-choice">
-    <form class="app-inline-form" action="/api/projects/{{ project.project_name }}/config-selection" method="post" data-app-action data-error-target="config-selection-error">
+    <form class="app-inline-form" action="/api/projects/{{ project.project_name }}/config-selection" method="post"{% if project.configs | length > 1 %} data-app-action data-error-target="config-selection-error"{% endif %}>
       <label class="app-field" for="project-nginx-config">
-        <span class="nc-label">aktive Config</span>
+        <span class="nc-label">Selected config</span>
         <select class="nc-input" id="project-nginx-config" name="nginx_config_path" autocomplete="off" required{% if active_action %} disabled{% endif %}>
           <option value=""{% if not choice or not choice.selected_nginx_config %} selected{% endif %} disabled>Bitte auswählen</option>
           {% for config in project.configs %}
@@ -13,7 +13,9 @@
           {% endfor %}
         </select>
       </label>
-      <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>Übernehmen</button>
+      {% if project.configs | length > 1 %}
+        <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>Aktivieren</button>
+      {% endif %}
     </form>
     {% for config in project.configs %}
       {% if choice and config.config_path == choice.selected_nginx_config %}
@@ -23,6 +25,13 @@
         {% if config.enabled %}
         <form action="/api/projects/{{ config.project_name }}/configs/{{ config.config_path.name }}/deactivate" method="post" data-app-action data-error-target="config-selection-error">
           <button class="nc-button nc-button--danger nc-button--icon" type="submit" aria-label="Config deaktivieren" title="Aktive Config deaktivieren"{% if active_action %} disabled{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
+          </button>
+        </form>
+        {% else %}
+        <form action="/api/projects/{{ config.project_name }}/config-selection" method="post" data-app-action data-error-target="config-selection-error">
+          <input type="hidden" name="nginx_config_path" value="{{ config.config_path }}">
+          <button class="nc-button nc-button--quiet nc-button--icon" type="submit" aria-label="Config aktivieren" title="Config aktivieren"{% if active_action %} disabled{% endif %}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
           </button>
         </form>

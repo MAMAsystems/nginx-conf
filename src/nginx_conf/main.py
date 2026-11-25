@@ -1023,7 +1023,12 @@ async def switch_project_config_api(project_name: str, request: Request) -> dict
         "nginx.last_test",
         {"ok": result.result.exit_code == 0, "action_id": result.action_id, "exit_code": result.result.exit_code},
     )
-    return _system_action_result_to_dict(result)
+    response = _system_action_result_to_dict(result)
+    if response["ok"]:
+        reload_result = nginx_reload_api()
+        response["nginx_reload"] = reload_result
+        response["ok"] = reload_result["ok"]
+    return response
 
 
 @app.get("/configs/{project_name}/{config_name}", response_class=HTMLResponse)
