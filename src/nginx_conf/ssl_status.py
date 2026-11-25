@@ -10,7 +10,7 @@ from typing import Any
 from nginx_conf.configs import ProjectInventory
 
 LETSENCRYPT_ROOT = Path("/etc/letsencrypt")
-ADMIN_DOMAINS = frozenset({"config.pepperz.de", "config2.mamasystems.de"})
+ADMIN_DOMAINS = frozenset({"config.pepperz.de", "config.mamasystems.de"})
 CERTBOT_WARNING_YELLOW_DAYS = 30
 CERTBOT_WARNING_RED_DAYS = 14
 CERTBOT_WARNING_CRITICAL_DAYS = 7
