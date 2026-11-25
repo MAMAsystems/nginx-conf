@@ -30,6 +30,15 @@ client = TestClient(main.app)
 ROOT = main.Path(__file__).parent
 
 
+def test_robots_txt_disallows_crawling_without_login() -> None:
+    browser = TestClient(main.app)
+    response = browser.get("/robots.txt", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/plain; charset=utf-8"
+    assert response.text == "User-agent: *\nDisallow: /\n"
+
+
 def test_startup_loads_installation_password_file_before_first_login(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(main, "DATABASE_PATH", tmp_path / "nginx-conf.sqlite3")
     path = tmp_path / "installation-password"

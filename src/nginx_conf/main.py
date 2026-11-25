@@ -113,6 +113,7 @@ DATABASE_PATH = default_database_path()
 LETSENCRYPT_ROOT = Path("/etc/letsencrypt")
 PUBLIC_PATHS = {
     "/health",
+    "/robots.txt",
     "/login",
     "/api/login",
     "/login/password",
@@ -1082,6 +1083,11 @@ def config_detail(request: Request, project_name: str, config_name: str) -> Resp
 @app.get("/styleguide", response_class=HTMLResponse)
 def styleguide(request: Request) -> Response:
     return templates.TemplateResponse(request, "styleguide.html")
+
+
+@app.get("/robots.txt", response_class=FileResponse, include_in_schema=False)
+def robots_txt() -> FileResponse:
+    return FileResponse(Path(__file__).parent / "static" / "robots.txt", media_type="text/plain")
 
 
 @app.get("/health")
