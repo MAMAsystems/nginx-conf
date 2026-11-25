@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -95,6 +95,8 @@ def format_command_output(output: str) -> str:
 
 
 templates.env.filters["format_command_output"] = format_command_output
+STATISTICS_REPORT = Path("/var/lib/mama-goaccess/index.html")
+templates.env.globals["statistics_available"] = lambda: STATISTICS_REPORT.is_file()
 
 
 @asynccontextmanager
@@ -488,6 +490,20 @@ def _projects_page(request: Request, *, title: str, project_name: str | None = N
             "managed_pm2_projects": {process.project_name for process in database.list_managed_pm2_processes()},
             "active_action": database.get_active_action(),
             "action_notifications": database.get_recent_action_results(),
+        },
+    )
+
+
+@app.get("/statistik/", response_class=FileResponse, include_in_schema=False)
+def statistics_page() -> FileResponse:
+    if not STATISTICS_REPORT.is_file():
+        raise HTTPException(status_code=404, detail="Kein Statistikbericht verfügbar.")
+    return FileResponse(
+        STATISTICS_REPORT,
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Security-Policy": "sandbox allow-scripts",
         },
     )
 

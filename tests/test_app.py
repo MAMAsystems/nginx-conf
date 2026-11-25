@@ -293,6 +293,27 @@ def test_project_page_requires_login(monkeypatch, tmp_path) -> None:
     assert response.headers["location"] == "/login"
 
 
+def test_statistics_uses_app_login_and_is_linked_only_when_available(monkeypatch, tmp_path) -> None:
+    configure_test_roots(monkeypatch, tmp_path)
+    report = tmp_path / "statistics.html"
+    monkeypatch.setattr(main, "STATISTICS_REPORT", report)
+
+    assert '<a href="/statistik/">Statistik</a>' not in client.get("/").text
+    assert client.get("/statistik/").status_code == 404
+    report.write_text("<html>MAMA systems Webstatistik</html>", encoding="utf-8")
+    with TestClient(main.app) as anonymous:
+        response = anonymous.get("/statistik/", follow_redirects=False)
+        assert response.status_code == 303
+        assert response.headers["location"] == "/login"
+
+    assert '<a href="/statistik/">Statistik</a>' in client.get("/").text
+    response = client.get("/statistik/")
+    assert response.status_code == 200
+    assert "MAMA systems Webstatistik" in response.text
+    assert response.headers["cache-control"] == "private, no-store"
+    assert response.headers["content-security-policy"] == "sandbox allow-scripts"
+
+
 def test_empty_project_table(monkeypatch, tmp_path) -> None:
     configure_test_roots(monkeypatch, tmp_path)
     monkeypatch.setattr(main, "PROJECT_ROOT", tmp_path)

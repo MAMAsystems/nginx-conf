@@ -17,6 +17,7 @@
 <nav class="nc-nav" aria-label="Hauptnavigation">
   <a href="/"{% if request.url.path in ['/', '/configs'] %} aria-current="page"{% endif %}>Projekte</a>
   <a href="/logs"{% if log_sections is defined %} aria-current="page"{% endif %}>Logs</a>
+  {% if statistics_available() %}<a href="/statistik/">Statistik</a>{% endif %}
 </nav>
 {% endblock %}
 {% block content %}
