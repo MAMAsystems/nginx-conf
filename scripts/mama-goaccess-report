@@ -4,6 +4,13 @@ shopt -s nullglob
 logs=(/var/log/nginx/mamasystems-access.log /var/log/nginx/mamasystems-access.log.[0-9]*)
 report=$(mktemp /var/lib/mama-goaccess/report.XXXXXX.html)
 trap 'rm -f "$report"' EXIT
-zcat -f -- "${logs[@]}" | /usr/bin/goaccess - --log-format=COMBINED --anonymize-ip --no-query-string --ignore-crawlers --html-report-title='MAMA systems Webstatistik' --no-progress -o "$report"
+# Combined log entries written before the format change have no host or timing.
+zcat -f -- "${logs[@]}" |
+    sed '/"$/s/$/ unbekannt -/' |
+    LC_TIME=C /usr/bin/goaccess - --no-global-config \
+    --log-format='%h %^ %^ [%d:%t %^] "%r" %s %b "%R" "%u" %v %T' \
+    --date-format='%d/%b/%Y' --time-format='%T' --concat-vhost-req \
+    --anonymize-ip --no-query-string --ignore-crawlers \
+    --html-report-title='MAMA systems Webstatistik' --no-progress -o "$report"
 chmod 0640 "$report"
 mv -f "$report" /var/lib/mama-goaccess/index.html

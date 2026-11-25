@@ -389,7 +389,10 @@ versionierte Nginx-Konfiguration erfasst Zugriffe auf den Homepage-VHost mit
 `server_name mamasystems.de www.mamasystems.de`. Dieser VHost übernimmt die
 Zugriffslogs aus dem Nginx-HTTP-Kontext. Die Datei unter `/var/log/nginx` wird
 durch die vorhandene Nginx-Logrotation erfasst. Der HTML-Bericht verarbeitet
-das aktuelle und die noch vorhandenen rotierten Homepage-Logs.
+das aktuelle und die noch vorhandenen rotierten Homepage-Logs. Das Format
+ergänzt das Combined-Log um den angefragten Host und die Nginx-Anfragedauer.
+GoAccess gruppiert angefragte URLs nach Host. Alte Logzeilen bleiben als
+`unbekannt` sichtbar und haben keine gemessene Anfragedauer.
 
 Nach Einrichtung von Nginx, der Homepage und des NC-Dienstkontos aus dem
 ausgecheckten NC-Repository installieren:
