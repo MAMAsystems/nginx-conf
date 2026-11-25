@@ -436,7 +436,9 @@ sollen sauber abgeschlossen und Fehler als Status gespeichert werden; falls ein
 stale Lock real auftritt, wird das spaeter als konkretes Problem behandelt.
 
 Aktivieren und Deaktivieren erfolgt ueber verwaltete Symlinks nach
-`/etc/nginx/sites-enabled`.
+`/etc/nginx/sites-enabled`. Beim Deaktivieren über den Powerbutton folgt auf
+einen erfolgreichen Nginx-Test automatisch ein Reload über die üblichen
+Sicherheitsprüfungen.
 
 Die App geht im MVP nicht davon aus, dass ausserhalb laufend Nginx-Sites
 aktiviert oder geaendert werden. Falls bei Projektimport, expliziter Pruefung

@@ -1407,22 +1407,15 @@ def _set_config_activation(project_name: str, config_name: str, *, subcommand: s
     except ActionLockError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
 
-    response: dict[str, object] = {"activation": _system_action_result_to_dict(helper_result), "nginx_test": None}
+    response: dict[str, object] = {
+        "activation": _system_action_result_to_dict(helper_result),
+        "nginx_test": None,
+    }
     if helper_result.result.exit_code == 0:
-        try:
-            nginx_result = get_system_action_service(db).run(nginx_test_command())
-        except ActionLockError as error:
-            raise HTTPException(status_code=409, detail=str(error)) from error
-        ok = nginx_result.result.exit_code == 0
-        db.set_ui_state(
-            "nginx.last_test",
-            {
-                "ok": ok,
-                "action_id": nginx_result.action_id,
-                "exit_code": nginx_result.result.exit_code,
-            },
-        )
+        nginx_result = _run_nginx_test_and_record(db)
         response["nginx_test"] = _system_action_result_to_dict(nginx_result)
+        if subcommand == "deactivate-config" and nginx_result.result.exit_code == 0:
+            response["nginx_reload"] = nginx_reload_api()
     return response
 
 

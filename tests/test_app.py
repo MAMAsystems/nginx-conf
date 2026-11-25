@@ -850,7 +850,13 @@ def test_nginx_reload_api_runs_after_successful_test(monkeypatch, tmp_path) -> N
     assert response.json()["action_type"] == "nginx-reload"
 
 
-def test_config_activation_api_runs_helper_then_nginx_test(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize(
+    ("operation", "test_exit_code", "expect_reload"),
+    [("activate", 0, False), ("deactivate", 0, True), ("deactivate", 1, False)],
+)
+def test_config_activation_api_tests_and_reloads_on_successful_deactivation(
+    monkeypatch, tmp_path, operation, test_exit_code, expect_reload
+) -> None:
     project_root = tmp_path / "opt/www"
     enabled_root = tmp_path / "etc/nginx/sites-enabled"
     project_dir = project_root / "demo-app"
@@ -867,6 +873,7 @@ def test_config_activation_api_runs_helper_then_nginx_test(monkeypatch, tmp_path
     db.save_project_selection("demo-app", nginx_config_path=config_path, pm2_start_script_path=None)
     authenticate_test_client(db)
     calls = []
+    helper_subcommand = f"{operation}-config"
 
     class Service:
         def __init__(self, db) -> None:
@@ -874,30 +881,41 @@ def test_config_activation_api_runs_helper_then_nginx_test(monkeypatch, tmp_path
 
         def run(self, command, *, action_id=None):
             calls.append(command.subcommand)
-            if command.subcommand == "activate-config":
+            if command.subcommand == helper_subcommand:
                 assert command.stdin_json["link_path"] == str(enabled_root / "demo-app.conf")
                 return SystemActionResult(
                     action_id=action_id,
                     command=command,
                     result=CommandResult(exit_code=0, stdout='{"ok": true}', stderr=""),
                 )
+            if command.subcommand == "nginx-reload":
+                assert command.argv == nginx_reload_command().argv
+                return SystemActionResult(
+                    action_id="nginx-reload-action",
+                    command=command,
+                    result=CommandResult(exit_code=0, stdout="", stderr=""),
+                )
             assert command.argv == nginx_test_command().argv
             return SystemActionResult(
                 action_id="nginx-test-action",
                 command=command,
-                result=CommandResult(exit_code=0, stdout="syntax ok", stderr=""),
+                result=CommandResult(exit_code=test_exit_code, stdout="", stderr=""),
             )
 
     monkeypatch.setattr(main, "get_system_action_service", lambda db: Service(db))
 
-    response = client.post("/api/projects/demo-app/configs/app.nginx/activate")
+    response = client.post(f"/api/projects/demo-app/configs/app.nginx/{operation}")
 
     assert response.status_code == 200
-    assert calls == ["activate-config", "nginx-test"]
+    assert calls == [helper_subcommand, "nginx-test"] + (["nginx-reload"] if expect_reload else [])
     payload = response.json()
-    assert payload["activation"]["action_type"] == "helper-activate-config"
+    assert payload["activation"]["action_type"] == f"helper-{helper_subcommand}"
     assert payload["nginx_test"]["action_type"] == "nginx-test"
-    assert AppDatabase(main.DATABASE_PATH).get_ui_state("nginx.last_test")["ok"] is True
+    assert AppDatabase(main.DATABASE_PATH).get_ui_state("nginx.last_test")["ok"] == (test_exit_code == 0)
+    if expect_reload:
+        assert payload["nginx_reload"]["ok"] is True
+    else:
+        assert "nginx_reload" not in payload
 
 
 def test_config_save_api_writes_with_helper_then_runs_nginx_test(monkeypatch, tmp_path) -> None:
