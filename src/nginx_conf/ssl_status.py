@@ -10,7 +10,7 @@ from typing import Any
 from nginx_conf.configs import ProjectInventory
 
 LETSENCRYPT_ROOT = Path("/etc/letsencrypt")
-ADMIN_DOMAIN = "config.pepperz.de"
+ADMIN_DOMAINS = frozenset({"config.pepperz.de", "config2.mamasystems.de"})
 CERTBOT_WARNING_YELLOW_DAYS = 30
 CERTBOT_WARNING_RED_DAYS = 14
 CERTBOT_WARNING_CRITICAL_DAYS = 7
@@ -87,7 +87,7 @@ def discover_ssl_inventory(
         lineage
         for lineage in lineages
         if lineage.domains
-        and set(lineage.domains) != {ADMIN_DOMAIN}
+        and not ADMIN_DOMAINS.issuperset(lineage.domains)
         and not set(lineage.domains).intersection(assigned_domains)
     )
     return SSLInventory(projects=tuple(project_statuses), unassigned_lineages=unassigned_lineages)

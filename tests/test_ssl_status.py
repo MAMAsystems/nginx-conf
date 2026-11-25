@@ -153,6 +153,7 @@ def test_admin_only_certificate_is_not_an_unassigned_project_certificate(tmp_pat
     names_and_domains = {
         "config.pepperz.de": "config.pepperz.de",
         "config.pepperz.de-0001": "config.pepperz.de",
+        "config2.mamasystems.de": "config2.mamasystems.de",
         "orphan.example.com": "orphan.example.com",
         "mixed": "config.pepperz.de,foreign.example.com",
     }
