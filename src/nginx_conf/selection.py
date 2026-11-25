@@ -41,6 +41,7 @@ class ProjectChoiceState:
     selected_pm2_start_script: Path | None
     nginx_selection_source: str | None
     pm2_selection_source: str | None
+    is_static: bool = False
     issues: tuple[InventoryIssue, ...] = ()
 
 
@@ -69,7 +70,8 @@ def find_pm2_start_scripts(project_path: Path) -> tuple[Path, ...]:
 def build_project_choice_state(project: ProjectInventory, db: AppDatabase) -> ProjectChoiceState:
     selection = db.get_project_selection(project.project_name)
     nginx_candidates = tuple(config.config_path for config in project.configs)
-    pm2_start_scripts = find_pm2_start_scripts(project.project_path)
+    is_static = selection is not None and selection.is_static
+    pm2_start_scripts = () if is_static else find_pm2_start_scripts(project.project_path)
     issues: list[InventoryIssue] = []
 
     selected_nginx_config, nginx_source = _resolve_selection(
@@ -79,16 +81,21 @@ def build_project_choice_state(project: ProjectInventory, db: AppDatabase) -> Pr
         required_code="nginx_selection_required",
         saved_missing_code="saved_nginx_selection_missing",
     )
-    selected_pm2_start_script, pm2_source = _resolve_selection(
-        candidates=pm2_start_scripts,
-        saved_path=selection.pm2_start_script_path if selection else None,
-        missing_code="missing_pm2_start_script",
-        required_code="pm2_start_script_selection_required",
-        saved_missing_code="saved_pm2_start_script_missing",
+    selected_pm2_start_script, pm2_source = (
+        (None, None)
+        if is_static
+        else _resolve_selection(
+            candidates=pm2_start_scripts,
+            saved_path=selection.pm2_start_script_path if selection else None,
+            missing_code="missing_pm2_start_script",
+            required_code="pm2_start_script_selection_required",
+            saved_missing_code="saved_pm2_start_script_missing",
+        )
     )
 
     issues.extend(_selection_issues(project.project_path, nginx_candidates, selected_nginx_config, nginx_source))
-    issues.extend(_selection_issues(project.project_path, pm2_start_scripts, selected_pm2_start_script, pm2_source))
+    if not is_static:
+        issues.extend(_selection_issues(project.project_path, pm2_start_scripts, selected_pm2_start_script, pm2_source))
 
     return ProjectChoiceState(
         project_name=project.project_name,
@@ -98,6 +105,7 @@ def build_project_choice_state(project: ProjectInventory, db: AppDatabase) -> Pr
         selected_pm2_start_script=selected_pm2_start_script,
         nginx_selection_source=nginx_source,
         pm2_selection_source=pm2_source,
+        is_static=is_static,
         issues=tuple(issues),
     )
 
@@ -136,6 +144,7 @@ def save_project_choice(
 def project_choice_to_dict(choice: ProjectChoiceState) -> dict[str, object]:
     return {
         "project_name": choice.project_name,
+        "is_static": choice.is_static,
         "nginx_candidates": [str(path) for path in choice.nginx_candidates],
         "pm2_start_scripts": [str(path) for path in choice.pm2_start_scripts],
         "selected_nginx_config": _path_to_str(choice.selected_nginx_config),

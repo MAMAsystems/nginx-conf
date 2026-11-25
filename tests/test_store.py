@@ -229,3 +229,24 @@ def test_project_selection_cannot_change_during_another_action(tmp_path):
         "demo", nginx_config_path="/opt/www/demo/app.nginx", pm2_start_script_path=None, action_id=action_id
     )
     assert db.get_project_selection("demo").nginx_config_path == "/opt/www/demo/app.nginx"
+
+
+def test_initialize_migrates_existing_project_selections(tmp_path):
+    path = tmp_path / "state.sqlite3"
+    with sqlite3.connect(path) as connection:
+        connection.executescript("""
+            create table project_selections (
+                project_name text primary key, nginx_config_path text,
+                pm2_start_script_path text, updated_at text not null
+            );
+            insert into project_selections values ('demo', '/demo/app.nginx', '/demo/start.sh', '2026-01-01');
+        """)
+    db = AppDatabase(path)
+    db.initialize()
+    assert not db.get_project_selection("demo").is_static
+    db.set_project_static("demo", True)
+    db.save_project_selection("demo", nginx_config_path="/demo/new.nginx", pm2_start_script_path="/demo/start.sh")
+    selection = db.get_project_selection("demo")
+    assert selection.is_static
+    assert selection.nginx_config_path == "/demo/new.nginx"
+    assert selection.pm2_start_script_path == "/demo/start.sh"

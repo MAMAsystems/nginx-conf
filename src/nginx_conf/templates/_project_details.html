@@ -95,19 +95,29 @@
         <span class="nc-status--warning">Auswahl erforderlich</span>
       {% endif %}
     </p>
-    <p class="nc-text nc-text--small app-meta">
-      PM2-Startscript:
-      {% if choice.selected_pm2_start_script %}
-        {{ choice.selected_pm2_start_script }}
-        {% if choice.pm2_selection_source == "auto" %}(automatisch, einziger Kandidat){% else %}(gespeicherte Auswahl){% endif %}
-      {% else %}
-        <span class="nc-status--warning">nicht konfiguriert</span>
-      {% endif %}
-    </p>
-    {% if choice.selected_pm2_start_script and project.project_name not in managed_pm2_projects %}
-      <form action="/api/projects/{{ project.project_name }}/pm2/create" method="post">
-        <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>PM2 anlegen</button>
+    <div class="nc-row">
+      <span class="nc-text">{{ 'Statische Website' if choice.is_static else 'PM2-Verwaltung' }}</span>
+      <form action="/api/projects/{{ project.project_name }}/static" method="post" data-app-action data-error-target="project-static-error">
+        <input type="hidden" name="is_static" value="{{ 'false' if choice.is_static else 'true' }}">
+        <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>{{ 'PM2-Verwaltung einschalten' if choice.is_static else 'Als statische Website markieren' }}</button>
       </form>
+    </div>
+    <p class="nc-text nc-status--error" id="project-static-error" role="alert" hidden></p>
+    {% if not choice.is_static %}
+      <p class="nc-text nc-text--small app-meta">
+        PM2-Startscript:
+        {% if choice.selected_pm2_start_script %}
+          {{ choice.selected_pm2_start_script }}
+          {% if choice.pm2_selection_source == "auto" %}(automatisch, einziger Kandidat){% else %}(gespeicherte Auswahl){% endif %}
+        {% else %}
+          <span class="nc-status--warning">nicht konfiguriert</span>
+        {% endif %}
+      </p>
+      {% if choice.selected_pm2_start_script and project.project_name not in managed_pm2_projects %}
+        <form action="/api/projects/{{ project.project_name }}/pm2/create" method="post">
+          <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>PM2 anlegen</button>
+        </form>
+      {% endif %}
     {% endif %}
     {% if choice.issues %}
       <ul class="nc-content-list">
@@ -175,50 +185,52 @@
       {% endif %}
     {% endif %}
   {% endif %}
-  {% if pm2_status.error %}
-    <p class="nc-status--error">{{ pm2_status.error }}</p>
-  {% endif %}
-  {% if pm2_processes_by_project is defined and pm2_processes_by_project.get(project.project_name) %}
-    <ul class="nc-content-list">
-      {% for process in pm2_processes_by_project.get(project.project_name) %}
-        <li>
-          PM2 {{ process.name }}:
-          {% if process.status %}
-            {{ process.status }}
-          {% else %}
-            Status unbekannt
-          {% endif %}
-          {% if process.port %}
-            <span class="nc-text nc-text--small app-meta">Port {{ process.port }}</span>
-          {% endif %}
-          {% if process.restart_count is not none %}
-            <span class="nc-text nc-text--small app-meta">Restarts {{ process.restart_count }}</span>
-          {% endif %}
-          {% if process.managed %}
-            <span class="nc-status nc-status--success">verwaltet</span>
-            <div class="app-actions">
-              <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/restart" method="post">
-                <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>Restart</button>
-              </form>
-              <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/stop" method="post">
-                <button class="nc-button nc-button--danger" type="submit"{% if active_action %} disabled{% endif %}>Stop</button>
-              </form>
-              <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/start" method="post">
-                <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>Start</button>
-              </form>
-              <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/delete" method="post">
-                <button class="nc-button nc-button--danger" type="submit"{% if active_action %} disabled{% endif %}>Delete</button>
-              </form>
-            </div>
-          {% elif process.warning == "unmanaged_pm2_process" %}
-            <span class="nc-status--warning">unverwaltet: manuell stoppen und ueber die App neu anlegen</span>
-          {% endif %}
-          {% if process.cwd %}
-            <div class="nc-text nc-text--small app-meta">cwd {{ process.cwd }}</div>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
+  {% if not choice or not choice.is_static %}
+    {% if pm2_status.error %}
+      <p class="nc-status--error">{{ pm2_status.error }}</p>
+    {% endif %}
+    {% if pm2_processes_by_project is defined and pm2_processes_by_project.get(project.project_name) %}
+      <ul class="nc-content-list">
+        {% for process in pm2_processes_by_project.get(project.project_name) %}
+          <li>
+            PM2 {{ process.name }}:
+            {% if process.status %}
+              {{ process.status }}
+            {% else %}
+              Status unbekannt
+            {% endif %}
+            {% if process.port %}
+              <span class="nc-text nc-text--small app-meta">Port {{ process.port }}</span>
+            {% endif %}
+            {% if process.restart_count is not none %}
+              <span class="nc-text nc-text--small app-meta">Restarts {{ process.restart_count }}</span>
+            {% endif %}
+            {% if process.managed %}
+              <span class="nc-status nc-status--success">verwaltet</span>
+              <div class="app-actions">
+                <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/restart" method="post">
+                  <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>Restart</button>
+                </form>
+                <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/stop" method="post">
+                  <button class="nc-button nc-button--danger" type="submit"{% if active_action %} disabled{% endif %}>Stop</button>
+                </form>
+                <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/start" method="post">
+                  <button class="nc-button" type="submit"{% if active_action %} disabled{% endif %}>Start</button>
+                </form>
+                <form action="/api/projects/{{ project.project_name }}/pm2/{{ process.name }}/delete" method="post">
+                  <button class="nc-button nc-button--danger" type="submit"{% if active_action %} disabled{% endif %}>Delete</button>
+                </form>
+              </div>
+            {% elif process.warning == "unmanaged_pm2_process" %}
+              <span class="nc-status--warning">unverwaltet: manuell stoppen und ueber die App neu anlegen</span>
+            {% endif %}
+            {% if process.cwd %}
+              <div class="nc-text nc-text--small app-meta">cwd {{ process.cwd }}</div>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   {% endif %}
   {% if project.issues %}
     <ul class="nc-content-list">

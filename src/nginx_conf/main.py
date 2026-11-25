@@ -606,6 +606,8 @@ async def pm2_create_api(project_name: str, request: Request) -> dict[str, objec
     pm2_name = _blank_to_none(payload.get("pm2_name")) or project_name
     db = get_database()
     project, choice = find_choice_or_404(project_name, db)
+    if choice.is_static:
+        raise HTTPException(status_code=409, detail="Statische Websites verwenden kein PM2.")
     if choice.selected_pm2_start_script is None:
         raise HTTPException(status_code=400, detail="PM2 start script must be selected before create")
     if db.list_managed_pm2_processes(project_name):
@@ -639,6 +641,9 @@ def pm2_lifecycle_api(project_name: str, pm2_name: str, operation: str) -> dict[
         raise HTTPException(status_code=400, detail=f"Unsupported PM2 operation: {operation}")
     db = get_database()
     managed = _managed_pm2_process_or_404(db, project_name, pm2_name)
+    selection = db.get_project_selection(project_name)
+    if selection and selection.is_static:
+        raise HTTPException(status_code=409, detail="Statische Websites verwenden kein PM2.")
     try:
         result = get_system_action_service(db).run(pm2_lifecycle_command(operation, managed.pm2_name))
     except ActionLockError as error:
@@ -913,6 +918,29 @@ def project_git_reset_api(project_name: str) -> dict[str, object]:
         response["nginx_test"] = _system_action_result_to_dict(nginx_result)
         db.delete_ui_state(_config_edit_test_state_key(project.project_name, choice.selected_nginx_config))
     return response
+
+
+@app.post("/api/projects/{project_name}/static")
+async def set_project_static_api(project_name: str, request: Request) -> dict[str, bool]:
+    payload = await _request_payload(request)
+    value = payload.get("is_static")
+    if isinstance(value, str) and value in ("true", "false"):
+        value = value == "true"
+    if not isinstance(value, bool):
+        raise HTTPException(status_code=400, detail="Bitte einen gültigen Projektmodus auswählen.")
+    project = find_project_or_404(project_name)
+    db = get_database()
+    if value:
+        inventory = read_pm2_status(project_root=PROJECT_ROOT, projects=(project,), db=db, runner=get_command_runner(db))
+        if inventory.error:
+            raise HTTPException(status_code=503, detail="Die PM2-Prozesse konnten nicht geprüft werden.")
+        if any(process.project_name == project_name for process in inventory.processes):
+            raise HTTPException(status_code=409, detail="Entferne zuerst den PM2-Prozess dieses Projekts.")
+    try:
+        db.set_project_static(project_name, value)
+    except (ActionLockError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {"is_static": value}
 
 
 @app.post("/api/projects/{project_name}/selection")

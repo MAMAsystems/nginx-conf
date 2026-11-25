@@ -554,6 +554,39 @@ def test_project_page_hides_pm2_create_for_registered_project(monkeypatch, tmp_p
     assert ("PM2 anlegen" in response.text) == (registered_project != "demo-app")
 
 
+def test_static_project_hides_pm2_and_restores_it_when_switched_back(monkeypatch, tmp_path) -> None:
+    _project, config, _script = configure_pm2_project_roots(monkeypatch, tmp_path)
+    monkeypatch.setattr(main, "read_pm2_status", lambda **kwargs: PM2StatusInventory(processes=()))
+    url = "/api/projects/demo-app/static"
+
+    assert client.post(url, data={"is_static": "invalid"}).status_code == 400
+    assert client.post(url, data={"is_static": "true"}).json() == {"is_static": True}
+    selection = main.get_database().get_project_selection("demo-app")
+    assert selection.nginx_config_path == str(config)
+    assert selection.is_static
+    page = client.get("/projects/demo-app")
+    assert "Statische Website" in page.text
+    assert "PM2 anlegen" not in page.text
+    assert "PM2-Startscript:" not in page.text
+    assert client.post("/api/projects/demo-app/pm2/create", json={}).status_code == 409
+
+    assert client.post(url, json={"is_static": False}).json() == {"is_static": False}
+    assert "PM2 anlegen" in client.get("/projects/demo-app").text
+
+
+def test_static_project_rejects_existing_pm2_process(monkeypatch, tmp_path) -> None:
+    project, _config, script = configure_pm2_project_roots(monkeypatch, tmp_path)
+    monkeypatch.setattr(main, "read_pm2_status", lambda **kwargs: PM2StatusInventory(processes=()))
+    db = main.get_database()
+    db.register_pm2_process(project_name="demo-app", pm2_name="worker", cwd=project, start_script=script)
+
+    response = client.post("/api/projects/demo-app/static", data={"is_static": "true"})
+
+    assert response.status_code == 409
+    assert "Entferne zuerst" in response.json()["detail"]
+    assert not db.get_project_selection("demo-app").is_static
+
+
 def test_pm2_create_api_uses_selected_start_script_and_registers_process(monkeypatch, tmp_path) -> None:
     project, _config, start_script = configure_pm2_project_roots(monkeypatch, tmp_path)
 

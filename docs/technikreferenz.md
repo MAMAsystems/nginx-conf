@@ -276,6 +276,11 @@ mehrere oder fremde enabled-Verweise werden nicht stillschweigend verändert.
 Die Config-Auswahl verwendet `autocomplete="off"`, damit Firefox nach einem
 Neuladen den gespeicherten Stand statt einer zuvor abgelehnten Auswahl zeigt.
 
+Projekte können als statische Website markiert werden. Der Modus wird zusammen
+mit der Projektauswahl gespeichert und deaktiviert die PM2-Skriptsuche und
+PM2-Aktionen. Vor dem Umschalten prüft die App, ob das Projekt bereits einen
+PM2-Prozess hat. Bestehende Projekte behalten standardmäßig die PM2-Verwaltung.
+
 Die Kandidatenerkennung bleibt bewusst simpel: Eine Nginx-Config ist im MVP
 eine Datei, deren Name auf `.nginx` endet und die irgendwo unterhalb des
 Projektordners liegt, ausgenommen Verzeichnisse namens `.venv`. Diese werden

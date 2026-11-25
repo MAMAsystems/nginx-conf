@@ -85,6 +85,7 @@ class ProjectSelection:
     nginx_config_path: str | None
     pm2_start_script_path: str | None
     updated_at: str
+    is_static: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -140,6 +141,12 @@ class AppDatabase:
                     "check (password_change_required in (0, 1))"
                 )
                 connection.execute("update auth_credentials set password_change_required = 1 where totp_secret = ''")
+            selection_columns = {row[1] for row in connection.execute("pragma table_info(project_selections)")}
+            if "is_static" not in selection_columns:
+                connection.execute(
+                    "alter table project_selections add column is_static integer not null default 0 "
+                    "check (is_static in (0, 1))"
+                )
             connection.execute("drop table if exists sessions")
             connection.execute("drop table if exists users")
             connection.execute("delete from ui_state where key in ('auth.setup_token', 'auth.login_token')")
@@ -211,6 +218,14 @@ class AppDatabase:
             if active is not None:
                 connection.rollback()
                 raise ActionLockError(f"Aktion laeuft bereits: {active['action_id']}")
+            if (
+                action_type == "pm2-start"
+                and project
+                and connection.execute(
+                    "select 1 from project_selections where project_name = ? and is_static = 1", (project,)
+                ).fetchone()
+            ):
+                raise ValueError("Statische Websites verwenden kein PM2.")
 
             connection.execute(
                 """
@@ -631,6 +646,31 @@ class AppDatabase:
                 ),
             )
 
+    def set_project_static(self, project_name: str, is_static: bool) -> None:
+        with self._connect() as connection:
+            connection.execute("begin immediate")
+            if connection.execute(
+                "select 1 from actions where status in (?, ?) limit 1", ACTIVE_ACTION_STATUSES
+            ).fetchone():
+                raise ActionLockError("Eine Aktion läuft bereits. Bitte warte auf ihr Ergebnis.")
+            if (
+                is_static
+                and connection.execute(
+                    "select 1 from managed_pm2_processes where project_name = ?", (project_name,)
+                ).fetchone()
+            ):
+                raise ValueError("Entferne zuerst den PM2-Prozess dieses Projekts.")
+            connection.execute(
+                """
+                insert into project_selections (project_name, is_static, updated_at)
+                values (?, ?, ?)
+                on conflict(project_name) do update set
+                    is_static = excluded.is_static,
+                    updated_at = excluded.updated_at
+                """,
+                (project_name, is_static, _now()),
+            )
+
     def get_project_selection(self, project_name: str) -> ProjectSelection | None:
         with self._connect() as connection:
             row = connection.execute(
@@ -644,6 +684,7 @@ class AppDatabase:
             nginx_config_path=row["nginx_config_path"],
             pm2_start_script_path=row["pm2_start_script_path"],
             updated_at=row["updated_at"],
+            is_static=bool(row["is_static"]),
         )
 
     def register_pm2_process(
@@ -881,6 +922,7 @@ create table if not exists project_selections (
     project_name text primary key,
     nginx_config_path text,
     pm2_start_script_path text,
+    is_static integer not null default 0 check (is_static in (0, 1)),
     updated_at text not null
 );
 
