@@ -1,10 +1,13 @@
 {% if project_rows %}
 <div class="nc-scroll app-project-table-wrap" tabindex="0" role="region" aria-label="Projekte">
   <table class="nc-table app-project-table" aria-label="Projekte">
-    <thead><tr><th scope="col">Hinweise</th><th scope="col">Projekt</th><th scope="col">Domains</th><th scope="col">Nginx</th></tr></thead>
+    <thead><tr><th scope="col">Projekt</th><th scope="col">Domains</th><th scope="col">Nginx</th><th scope="col">Hinweise</th></tr></thead>
     <tbody>
       {% for row in project_rows %}
       <tr>
+        <th scope="row"><a href="/projects/{{ row.name | urlencode }}">{{ row.name }}</a></th>
+        <td>{% for domain in row.domains %}{{ domain }}{% if not loop.last %}<br>{% endif %}{% else %}<span class="nc-text">Keine Domain ausgewählt</span>{% endfor %}</td>
+        <td><span class="nc-status{% if row.active %} nc-status--success{% endif %}">{{ "aktiv" if row.active else "nicht aktiv" }}</span></td>
         <td>
           {% if row.has_warning %}
           <a class="nc-icon-link app-project-warning" href="/projects/{{ row.name | urlencode }}" aria-label="Hinweise zu {{ row.name }} öffnen" title="Projekt prüfen">
@@ -12,9 +15,6 @@
           </a>
           {% else %}<span class="nc-text">Keine</span>{% endif %}
         </td>
-        <th scope="row"><a href="/projects/{{ row.name | urlencode }}">{{ row.name }}</a></th>
-        <td>{% for domain in row.domains %}{{ domain }}{% if not loop.last %}<br>{% endif %}{% else %}<span class="nc-text">Keine Domain ausgewählt</span>{% endfor %}</td>
-        <td><span class="nc-status{% if row.active %} nc-status--success{% endif %}">{{ "aktiv" if row.active else "nicht aktiv" }}</span></td>
       </tr>
       {% endfor %}
     </tbody>
