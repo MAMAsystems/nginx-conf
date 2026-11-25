@@ -391,7 +391,7 @@ Zugriffslogs aus dem Nginx-HTTP-Kontext. Die Datei unter `/var/log/nginx` wird
 durch die vorhandene Nginx-Logrotation erfasst. Der HTML-Bericht verarbeitet
 das aktuelle und die noch vorhandenen rotierten Homepage-Logs. Das Format
 ergänzt das Combined-Log um den angefragten Host und die Nginx-Anfragedauer.
-GoAccess gruppiert angefragte URLs nach Host. Alte Logzeilen bleiben als
+GoAccess zeigt die Hosts im Bereich Virtual Hosts. Alte Logzeilen bleiben als
 `unbekannt` sichtbar und haben keine gemessene Anfragedauer.
 
 Nach Einrichtung von Nginx, der Homepage und des NC-Dienstkontos aus dem

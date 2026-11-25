@@ -9,7 +9,7 @@ zcat -f -- "${logs[@]}" |
     sed '/"$/s/$/ unbekannt -/' |
     LC_TIME=C /usr/bin/goaccess - --no-global-config \
     --log-format='%h %^ %^ [%d:%t %^] "%r" %s %b "%R" "%u" %v %T' \
-    --date-format='%d/%b/%Y' --time-format='%T' --concat-vhost-req \
+    --date-format='%d/%b/%Y' --time-format='%T' \
     --anonymize-ip --no-query-string --ignore-crawlers \
     --html-report-title='MAMA systems Webstatistik' --no-progress -o "$report"
 chmod 0640 "$report"
