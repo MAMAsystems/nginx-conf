@@ -165,6 +165,8 @@
           class="nc-form app-editor"
           action="/api/projects/{{ config.project_name }}/configs/{{ config.config_path.name }}/save"
           method="post"
+          data-app-action
+          data-error-target="config-save-error"
         >
           <label class="nc-label" for="config-content">Konfiguration</label>
           <textarea class="nc-input nc-textarea" id="config-content" name="content" spellcheck="false">{{ config_content }}</textarea>
@@ -172,6 +174,7 @@
             <button class="nc-button nc-button--save" type="submit"{% if active_action %} disabled{% endif %}>Speichern und nginx -t</button>
           </div>
         </form>
+        <p class="nc-text nc-status--error" id="config-save-error" role="alert" hidden></p>
         {% if config_test_result %}
           <p class="nc-text nc-text--small app-meta">
             Letzter Test fuer diese Config:

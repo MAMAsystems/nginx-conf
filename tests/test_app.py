@@ -918,7 +918,14 @@ def test_config_activation_api_tests_and_reloads_on_successful_deactivation(
         assert "nginx_reload" not in payload
 
 
-def test_config_save_api_writes_with_helper_then_runs_nginx_test(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize(
+    "request_kwargs",
+    [
+        {"json": {"content": "server { listen 80; server_name new.example.com; }\n"}},
+        {"files": {"content": (None, "server { listen 80; server_name new.example.com; }\r\n")}},
+    ],
+)
+def test_config_save_api_writes_with_helper_then_runs_nginx_test(monkeypatch, tmp_path, request_kwargs) -> None:
     project, _enabled_root, config = configure_git_project_roots(monkeypatch, tmp_path)
     calls = []
 
@@ -945,7 +952,7 @@ def test_config_save_api_writes_with_helper_then_runs_nginx_test(monkeypatch, tm
 
     response = client.post(
         "/api/projects/demo-app/configs/app.nginx/save",
-        json={"content": "server { listen 80; server_name new.example.com; }\n"},
+        **request_kwargs,
     )
 
     assert response.status_code == 200
@@ -960,6 +967,19 @@ def test_config_save_api_writes_with_helper_then_runs_nginx_test(monkeypatch, tm
     state = AppDatabase(main.DATABASE_PATH).get_ui_state(f"config-edit-test:demo-app:{config}")
     assert state["ok"] is True
     assert run_git(project, "status", "--porcelain", "--", "app.nginx").stdout.startswith(" M app.nginx")
+
+
+def test_config_editor_uses_app_action_handler(monkeypatch, tmp_path) -> None:
+    configure_git_project_roots(monkeypatch, tmp_path)
+
+    response = client.get("/configs/demo-app/app.nginx")
+
+    assert response.status_code == 200
+    editor = response.text.split('class="nc-form app-editor"', 1)[1].split("</form>", 1)[0]
+    assert 'action="/api/projects/demo-app/configs/app.nginx/save"' in editor
+    assert "data-app-action" in editor
+    assert 'data-error-target="config-save-error"' in editor
+    assert 'id="config-save-error" role="alert" hidden' in response.text
 
 
 def test_config_detail_shows_static_asset_candidates(monkeypatch, tmp_path) -> None:

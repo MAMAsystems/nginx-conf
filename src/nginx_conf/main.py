@@ -734,6 +734,8 @@ async def save_config_api(project_name: str, config_name: str, request: Request)
     new_content = payload.get("content", payload.get("new_content"))
     if not isinstance(new_content, str):
         raise HTTPException(status_code=400, detail="Config content required")
+    if "application/json" not in request.headers.get("content-type", ""):
+        new_content = new_content.replace("\r\n", "\n")
 
     db = get_database()
     project, choice = find_choice_or_404(project_name, db)
