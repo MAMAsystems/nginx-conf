@@ -34,4 +34,4 @@
 
 - Jede Commit-Freigabe umfasst in diesem Projekt auch den normalen Push und das anschliessende Deployment des vollstaendigen Commit-Stands auf pepperz unter `config.pepperz.de`. Dafuer ist keine erneute Deployment-Freigabe erforderlich.
 - Nach jedem Deployment den installierten Commit und die Erreichbarkeit der App pruefen. Bestehende Zugangsdaten und Anwendungsdaten erhalten.
-- Die Freigabe zum Stagen und Committen bleibt weiterhin erforderlich.
+- Für besprochene Änderungen in diesem Projekt sind Staging, Commit und normaler Push ohne einzelne Rückfrage freigegeben. Ausgeliefert wird auf das im Auftrag vereinbarte Ziel.
