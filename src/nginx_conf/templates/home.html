@@ -45,32 +45,36 @@
       </div>
       {% endif %}
       <p class="nc-error" id="app-action-error" role="alert" hidden></p>
+      <aside class="app-notifications" aria-label="Aktionsmeldungen">
       {% if active_action %}
         <div class="nc-banner" role="status">
           <strong class="nc-banner__title">Aktion läuft: {{ active_action.action_type }}</strong>
           <p class="nc-text">{{ active_action.target }}</p>
         </div>
-      {% elif last_action_result %}
-        <form action="/api/actions/{{ last_action_result.action_id }}/ack" method="post">
-          <div class="nc-banner{% if last_action_result.status == 'failed' %} nc-banner--error{% elif last_action_result.status == 'succeeded' %} nc-banner--success{% endif %}">
-            <button class="nc-banner__ack" type="submit" aria-label="Ergebnis quittieren"></button>
+      {% endif %}
+      {% for result in action_notifications %}
+        <form action="/api/actions/{{ result.action_id }}/ack" method="post" data-notification data-finished-at="{{ result.finished_at }}">
+          <div class="nc-banner{% if result.status == 'failed' %} nc-banner--error{% elif result.status == 'succeeded' %} nc-banner--success{% endif %}">
+            <button class="nc-button nc-button--quiet nc-button--icon app-notification-close" type="submit" aria-label="Ergebnis quittieren" title="Ergebnis quittieren">×</button>
             <div class="nc-banner__content">
-              <strong class="nc-banner__title">{% if last_action_result.status == 'succeeded' %}Erfolgreich{% elif last_action_result.status == 'failed' %}Fehlgeschlagen{% else %}{{ last_action_result.status }}{% endif %}: {{ last_action_result.action_type }}</strong>
-              <p class="nc-text">{{ last_action_result.target }}</p>
+              <strong class="nc-banner__title">{% if result.status == 'succeeded' %}Erfolgreich{% elif result.status == 'failed' %}Fehlgeschlagen{% else %}{{ result.status }}{% endif %}: {{ result.action_type }}</strong>
+              <p class="nc-text">{{ result.target }}</p>
             </div>
-            {% if last_action_result.stdout_excerpt or last_action_result.stderr_excerpt or last_action_result.error_excerpt %}
+            {% if result.stdout_excerpt or result.stderr_excerpt or result.error_excerpt %}
               <details class="nc-disclosure">
                 <summary>Ausgabe</summary>
                 <div class="nc-disclosure__body">
-                  {% if last_action_result.stdout_excerpt %}<pre class="nc-code app-action-output">{{ last_action_result.stdout_excerpt | format_command_output }}</pre>{% endif %}
-                  {% if last_action_result.stderr_excerpt %}<pre class="nc-code app-action-output nc-status--error">{{ last_action_result.stderr_excerpt | format_command_output }}</pre>{% endif %}
-                  {% if last_action_result.error_excerpt %}<pre class="nc-code app-action-output nc-status--error">{{ last_action_result.error_excerpt | format_command_output }}</pre>{% endif %}
+                  {% if result.stdout_excerpt %}<pre class="nc-code app-action-output">{{ result.stdout_excerpt | format_command_output }}</pre>{% endif %}
+                  {% if result.stderr_excerpt %}<pre class="nc-code app-action-output nc-status--error">{{ result.stderr_excerpt | format_command_output }}</pre>{% endif %}
+                  {% if result.error_excerpt %}<pre class="nc-code app-action-output nc-status--error">{{ result.error_excerpt | format_command_output }}</pre>{% endif %}
                 </div>
               </details>
             {% endif %}
+            <p class="nc-error" role="alert" hidden>Die Meldung konnte nicht geschlossen werden.</p>
           </div>
         </form>
-      {% endif %}
+      {% endfor %}
+      </aside>
       <dialog class="nc-dialog" id="clone-project" aria-labelledby="clone-project-title" aria-describedby="clone-project-note">
           <h2 class="nc-heading" id="clone-project-title">Projekt klonen</h2>
           <p class="nc-text" id="clone-project-note">GitHub-Repository angeben. Das Projekt wird unter /opt/www angelegt.</p>
@@ -258,6 +262,7 @@
       {% endif %}
 {% endblock %}
 {% block scripts %}
+  <script src="{{ url_for('static', path='notifications.js') }}" defer></script>
   <script>
     const menu = document.getElementById('app-menu');
     const menuTrigger = document.getElementById('app-menu-trigger');

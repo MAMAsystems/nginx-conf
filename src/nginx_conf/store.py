@@ -5,13 +5,14 @@ import json
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 DATA_DIR = Path("/opt/nginx-config")
 DATABASE_FILENAME = "nginx-conf.sqlite3"
 MAX_EXCERPT_CHARS = 4_000
+NOTIFICATION_LIFETIME_SECONDS = 15
 ACTIVE_ACTION_STATUSES = ("started", "running")
 FINISHED_ACTION_STATUSES = ("succeeded", "failed")
 FORBIDDEN_JSON_KEYS = {
@@ -342,6 +343,19 @@ class AppDatabase:
                 FINISHED_ACTION_STATUSES,
             ).fetchone()
         return _action_from_row(row) if row is not None else None
+
+    def get_recent_action_results(self) -> list[ActionRecord]:
+        cutoff = (datetime.now(UTC) - timedelta(seconds=NOTIFICATION_LIFETIME_SECONDS)).isoformat()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                select * from actions
+                where status in (?, ?) and banner_acknowledged = 0 and finished_at > ?
+                order by finished_at desc, rowid desc
+                """,
+                (*FINISHED_ACTION_STATUSES, cutoff),
+            ).fetchall()
+        return [_action_from_row(row) for row in rows]
 
     def get_last_action_result_by_type(self, action_type: str) -> ActionRecord | None:
         with self._connect() as connection:

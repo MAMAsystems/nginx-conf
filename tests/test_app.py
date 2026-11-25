@@ -1539,6 +1539,32 @@ def test_action_status_endpoints_are_read_only(monkeypatch, tmp_path) -> None:
     assert payload["stderr_excerpt"] == "certbot failed"
 
 
+def test_action_notifications_show_recent_unacknowledged_results(monkeypatch, tmp_path) -> None:
+    from nginx_conf import store
+
+    configure_test_roots(monkeypatch, tmp_path)
+    db = AppDatabase(main.DATABASE_PATH)
+    with monkeypatch.context() as clock:
+        clock.setattr(store, "_now", lambda: "2000-01-01T00:00:00+00:00")
+        expired = db.create_action(action_type="nginx-test", target="expired")
+        db.finish_action(expired, status="succeeded", exit_code=0)
+    first = db.create_action(action_type="nginx-test", target="first")
+    db.finish_action(first, status="failed", exit_code=1)
+    second = db.create_action(action_type="nginx-reload", target="second")
+    db.finish_action(second, status="succeeded", exit_code=0)
+
+    page = client.get("/")
+    assert page.text.count("data-notification data-finished-at") == 2
+    assert page.text.index(f"/api/actions/{second}/ack") < page.text.index(f"/api/actions/{first}/ack")
+    assert f"/api/actions/{expired}/ack" not in page.text
+    assert db.get_action(expired) is not None
+
+    response = client.post(f"/api/actions/{first}/ack", headers={"Accept": "application/json"})
+    assert response.status_code == 204
+    assert f"/api/actions/{first}/ack" not in client.get("/").text
+    assert f"/api/actions/{second}/ack" in client.get("/").text
+
+
 def test_action_result_banner_can_be_acknowledged(monkeypatch, tmp_path) -> None:
     configure_test_roots(monkeypatch, tmp_path)
     db = AppDatabase(main.DATABASE_PATH)

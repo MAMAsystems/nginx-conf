@@ -487,7 +487,7 @@ def _projects_page(request: Request, *, title: str, project_name: str | None = N
             "pm2_processes_by_project": processes_by_project,
             "managed_pm2_projects": {process.project_name for process in database.list_managed_pm2_processes()},
             "active_action": database.get_active_action(),
-            "last_action_result": database.get_last_unacknowledged_result(),
+            "action_notifications": database.get_recent_action_results(),
         },
     )
 
@@ -518,7 +518,7 @@ def logs_page(request: Request) -> Response:
             "log_sections": log_sections,
             "log_lines": lines,
             "active_action": db.get_active_action(),
-            "last_action_result": db.get_last_unacknowledged_result(),
+            "action_notifications": db.get_recent_action_results(),
         },
     )
 
@@ -847,12 +847,14 @@ def last_action_result_api() -> dict[str, object]:
 
 
 @app.post("/api/actions/{action_id}/ack")
-def acknowledge_action_result_api(action_id: str) -> Response:
+def acknowledge_action_result_api(action_id: str, request: Request) -> Response:
     db = get_database()
     try:
         db.acknowledge_action_result(action_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail="Action result not found") from error
+    if request.headers.get("accept") == "application/json":
+        return Response(status_code=204)
     return RedirectResponse("/", status_code=303)
 
 
@@ -1056,7 +1058,7 @@ def config_detail(request: Request, project_name: str, config_name: str) -> Resp
             "certbot_actions": _certbot_actions_by_config_block((project,), ssl_inventory),
             "config_test_result": db.get_ui_state(_config_edit_test_state_key(project.project_name, config.config_path)),
             "active_action": db.get_active_action(),
-            "last_action_result": db.get_last_unacknowledged_result(),
+            "action_notifications": db.get_recent_action_results(),
         },
     )
 
